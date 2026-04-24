@@ -38,7 +38,7 @@ const PRODUCTS: Record<string, Product> = {
     label: "Roof",
     path: "/sequences/roof-final",
     videos: ["optimized-2.1-choose-explode-roof.mp4"],
-    exitVideo: "optimized-2.2-Fade Roof.mp4",
+    exitVideo: "optimized-2.2-Fade-Roof.mp4",
     hotspots: [
       { key: "4th-hole-elbow", label: "4th Hole Elbow", productKey: "4th-hole-elbow" },
       { key: "roof-panel",     label: "Roof Panel",     productKey: "roof-panel"     },
@@ -49,8 +49,8 @@ const PRODUCTS: Record<string, Product> = {
     key: "roof-panel",
     label: "Roof Panel",
     path: "/sequences/4.2-RoofPanel",
-    videos: ["optimized-2.21-Roof Panel.mp4"],
-    exitVideo: "optimized-2.22-Fade Roof Panel.mp4",
+    videos: ["optimized-2.21-Roof-Panel.mp4"],
+    exitVideo: "optimized-2.22-Fade-Roof-Panel.mp4",
     hotspots: [],
   },
 
@@ -58,8 +58,8 @@ const PRODUCTS: Record<string, Product> = {
     key: "4th-hole-elbow",
     label: "4th Hole Elbow",
     path: "/sequences/4.1-4thHoleElbow",
-    videos: ["optimized-2.11-4th Hole Elbow.mp4"],
-    exitVideo: "optimized-2.12-Fade 4HE.mp4",
+    videos: ["optimized-2.11-4th-Hole-Elbow.mp4"],
+    exitVideo: "optimized-2.12-Fade-4HE.mp4",
     hotspots: [],
   },
 
@@ -68,7 +68,7 @@ const PRODUCTS: Record<string, Product> = {
     label: "Upper Shell",
     path: "/sequences/uppershell-final",
     videos: ["optimized-2.2-choose-explode-upper-shell.mp4"],
-    exitVideo: "optimized-3.2-Fade Upper Shell.mp4",
+    exitVideo: "optimized-3.2-Fade-Upper-Shell.mp4",
     hotspots: [
       { key: "side-wall-panel", label: "Side Wall Panel", productKey: "side-wall-panel" },
     ],
@@ -78,8 +78,8 @@ const PRODUCTS: Record<string, Product> = {
     key: "side-wall-panel",
     label: "Side Wall Panel",
     path: "/sequences/4.3-SideWallPanel",
-    videos: ["optimized-3.11-Side Wall Panel.mp4"],
-    exitVideo: "optimized-3.12-Fade SW Panel.mp4",
+    videos: ["optimized-3.11-Side-Wall-Panel.mp4"],
+    exitVideo: "optimized-3.12-Fade-SW-Panel.mp4",
     hotspots: [],
   },
 
@@ -88,7 +88,7 @@ const PRODUCTS: Record<string, Product> = {
     label: "Lower Shell",
     path: "/sequences/4.0-LowerShell",
     videos: ["optimized-2.3-choose-explode-lower-shell.mp4"],
-    exitVideo: "optimized-4.2-Fade Lower SHell.mp4",
+    exitVideo: "optimized-4.2-Fade-Lower-SHell.mp4",
     hotspots: [],
   },
 
@@ -97,7 +97,7 @@ const PRODUCTS: Record<string, Product> = {
     label: "Tilt Platform",
     path: "/sequences/5.0-TiltPlatform",
     videos: ["optimized-2.4-choose-explode-tilt-platform.mp4"],
-    exitVideo: "optimized-5.2-Fade Tilt Platform.mp4",
+    exitVideo: "optimized-5.2-Fade-Tilt-Platform.mp4",
     hotspots: [],
   },
 };
