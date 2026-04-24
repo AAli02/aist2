@@ -37,7 +37,7 @@ export function useGamepad({ onAction, repeatDelay = 200 }: Options) {
     let raf: number;
 
     function poll() {
-      const gp = navigator.getGamepads?.()[1];
+      const gp = navigator.getGamepads?.()[0];
       if (gp) {
         const now = Date.now();
         gp.buttons.forEach((btn, idx) => {
