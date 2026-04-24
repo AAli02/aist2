@@ -26,9 +26,9 @@ const PRODUCTS: Record<string, Product> = {
     path: "/sequences/eaf-home",
     videos: ["optimized-1.0-Home.mp4"],
     hotspots: [
-      { key: "roof",          label: "Roof",          productKey: "roof"          },
-      { key: "upper-shell",   label: "Upper Shell",   productKey: "upper-shell"   },
-      { key: "lower-shell",   label: "Lower Shell",   productKey: "lower-shell"   },
+      { key: "roof", label: "Roof", productKey: "roof" },
+      { key: "upper-shell", label: "Upper Shell", productKey: "upper-shell" },
+      { key: "lower-shell", label: "Lower Shell", productKey: "lower-shell" },
       { key: "tilt-platform", label: "Tilt Platform", productKey: "tilt-platform" },
     ],
   },
@@ -41,7 +41,7 @@ const PRODUCTS: Record<string, Product> = {
     exitVideo: "optimized-2.2-Fade-Roof.mp4",
     hotspots: [
       { key: "4th-hole-elbow", label: "4th Hole Elbow", productKey: "4th-hole-elbow" },
-      { key: "roof-panel",     label: "Roof Panel",     productKey: "roof-panel"     },
+      { key: "roof-panel", label: "Roof Panel", productKey: "roof-panel" },
     ],
   },
 
@@ -109,5 +109,20 @@ export const HOME_SEQUENCE: string[] = [
   "lower-shell",
   "tilt-platform",
 ];
+
+// Depth-first order: home → roof → 4th-hole-elbow → roof-panel → upper-shell → side-wall-panel → lower-shell → tilt-platform
+function buildTraversal(): string[] {
+  const order: string[] = ["home"];
+  for (const parentKey of HOME_SEQUENCE) {
+    order.push(parentKey);
+    const parent = PRODUCTS[parentKey];
+    for (const hs of parent.hotspots) {
+      order.push(hs.productKey);
+    }
+  }
+  return order;
+}
+
+export const TRAVERSAL: string[] = buildTraversal();
 
 export default PRODUCTS;

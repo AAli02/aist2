@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import PRODUCTS, { HOME_SEQUENCE } from "@/data/product-map";
+import PRODUCTS, { TRAVERSAL } from "@/data/product-map";
 import { useGamepad } from "@/hooks/useGamepad";
 import ProductArrows from "@/components/ProductArrows";
 import Hotspot from "@/components/Hotspot";
@@ -33,7 +33,6 @@ const HOTSPOT_POSITIONS: Record<string, { top: string; left: string }[]> = {
 export default function CatalogPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
-  const [productIdx, setProductIdx] = useState(0);
   const [activeHotspot, setActiveHotspot] = useState(0);
   const [currentProduct, setCurrentProduct] = useState("home");
   const [videoEnded, setVideoEnded] = useState(false);
@@ -92,24 +91,13 @@ export default function CatalogPage() {
 
     switch (action) {
       case "dpad-left": {
-        if (currentProduct === "home") break;
-        const idx = HOME_SEQUENCE.indexOf(currentProduct);
-        if (idx <= 0) { goToProduct("home"); break; }
-        const prev = idx - 1;
-        setProductIdx(prev);
-        goToProduct(HOME_SEQUENCE[prev]);
+        const idx = TRAVERSAL.indexOf(currentProduct);
+        if (idx > 0) goToProduct(TRAVERSAL[idx - 1]);
         break;
       }
       case "dpad-right": {
-        if (currentProduct === "home") {
-          setProductIdx(0);
-          goToProduct(HOME_SEQUENCE[0]);
-        } else {
-          const idx = HOME_SEQUENCE.indexOf(currentProduct);
-          const next = Math.min(HOME_SEQUENCE.length - 1, idx + 1);
-          setProductIdx(next);
-          goToProduct(HOME_SEQUENCE[next]);
-        }
+        const idx = TRAVERSAL.indexOf(currentProduct);
+        if (idx < TRAVERSAL.length - 1) goToProduct(TRAVERSAL[idx + 1]);
         break;
       }
       case "dpad-up": {
@@ -177,29 +165,17 @@ export default function CatalogPage() {
       <ProductArrows
         label={product.label}
         onPrev={() => {
-          if (currentProduct === "home") return;
-          const idx = HOME_SEQUENCE.indexOf(currentProduct);
-          if (idx <= 0) { goToProduct("home"); return; }
-          const prev = idx - 1;
-          setProductIdx(prev);
-          goToProduct(HOME_SEQUENCE[prev]);
+          const idx = TRAVERSAL.indexOf(currentProduct);
+          if (idx > 0) goToProduct(TRAVERSAL[idx - 1]);
         }}
         onNext={() => {
-          if (currentProduct === "home") {
-            setProductIdx(0);
-            goToProduct(HOME_SEQUENCE[0]);
-            return;
-          }
-          const idx = HOME_SEQUENCE.indexOf(currentProduct);
-          if (idx < HOME_SEQUENCE.length - 1) {
-            const next = idx + 1;
-            setProductIdx(next);
-            goToProduct(HOME_SEQUENCE[next]);
-          }
+          const idx = TRAVERSAL.indexOf(currentProduct);
+          if (idx < TRAVERSAL.length - 1) goToProduct(TRAVERSAL[idx + 1]);
         }}
-        hasPrev={currentProduct !== "home"}
-        hasNext={currentProduct === "home" || HOME_SEQUENCE.indexOf(currentProduct) < HOME_SEQUENCE.length - 1}
+        hasPrev={TRAVERSAL.indexOf(currentProduct) > 0}
+        hasNext={TRAVERSAL.indexOf(currentProduct) < TRAVERSAL.length - 1}
       />
+
     </main>
   );
 }
