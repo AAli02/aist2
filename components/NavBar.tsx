@@ -31,7 +31,7 @@ export default function NavBar() {
   useGamepad({ onAction: handleAction });
 
   return (
-    <nav className="navbar fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pt-4 pb-0 border-b border-white/10 bg-[#242424]">      {TABS.map((tab) => (
+    <nav className="navbar sticky top-0 z-50 flex items-center justify-between px-4 pt-4 pb-0 border-b border-white/10 bg-[#242424]">      {TABS.map((tab) => (
       <button
         key={tab.route}
         onClick={() => router.push(tab.route)}
