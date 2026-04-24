@@ -1,65 +1,167 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import PRODUCTS, { HOME_SEQUENCE } from "@/data/product-map";
+import { useGamepad } from "@/hooks/useGamepad";
+import ProductArrows from "@/components/ProductArrows";
+import Hotspot from "@/components/Hotspot";
+
+const TABS = [
+  { route: "/" },
+  { route: "/electrode-game" },
+  { route: "/video-gallery" },
+  { route: "/contact" },
+];
+
+const HOTSPOT_POSITIONS: Record<string, { top: string; left: string }[]> = {
+  home: [
+    { top: "35%", left: "50%" },
+    { top: "50%", left: "50%" },
+    { top: "64%", left: "50%" },
+    { top: "76%", left: "50%" },
+  ],
+  roof: [
+    { top: "34%", left: "58%" },
+    { top: "70%", left: "50%" },
+  ],
+  "upper-shell": [
+    { top: "50%", left: "50%" },
+  ],
+};
+
+export default function CatalogPage() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState(0);
+  const [productIdx, setProductIdx] = useState(0);
+  const [activeHotspot, setActiveHotspot] = useState(0);
+  const [currentProduct, setCurrentProduct] = useState("home");
+  const [videoEnded, setVideoEnded] = useState(false);
+
+  const product = PRODUCTS[currentProduct];
+  const hotspots = product.hotspots;
+
+  const goToProduct = useCallback((key: string) => {
+    setCurrentProduct(key);
+    setActiveHotspot(0);
+    setVideoEnded(false);
+  }, []);
+
+  const handleAction = useCallback((action: string) => {
+    switch (action) {
+      case "dpad-left": {
+        if (currentProduct === "home") break;
+        const idx = HOME_SEQUENCE.indexOf(currentProduct);
+        if (idx <= 0) { goToProduct("home"); break; }
+        const prev = idx - 1;
+        setProductIdx(prev);
+        goToProduct(HOME_SEQUENCE[prev]);
+        break;
+      }
+      case "dpad-right": {
+        if (currentProduct === "home") {
+          setProductIdx(0);
+          goToProduct(HOME_SEQUENCE[0]);
+        } else {
+          const idx = HOME_SEQUENCE.indexOf(currentProduct);
+          const next = Math.min(HOME_SEQUENCE.length - 1, idx + 1);
+          setProductIdx(next);
+          goToProduct(HOME_SEQUENCE[next]);
+        }
+        break;
+      }
+      case "dpad-up": {
+        if (videoEnded && hotspots.length > 0)
+          setActiveHotspot((p) => (p - 1 + hotspots.length) % hotspots.length);
+        break;
+      }
+      case "dpad-down": {
+        if (videoEnded && hotspots.length > 0)
+          setActiveHotspot((p) => (p + 1) % hotspots.length);
+        break;
+      }
+      case "a": {
+        if (videoEnded && hotspots.length > 0)
+          goToProduct(hotspots[activeHotspot].productKey);
+        break;
+      }
+      case "x": {
+        const prev = Math.max(0, activeTab - 1);
+        setActiveTab(prev);
+        router.push(TABS[prev].route);
+        break;
+      }
+      case "b": {
+        const next = Math.min(TABS.length - 1, activeTab + 1);
+        setActiveTab(next);
+        router.push(TABS[next].route);
+        break;
+      }
+      case "y": {
+        goToProduct("home");
+        break;
+      }
+    }
+  }, [currentProduct, hotspots, activeHotspot, activeTab, videoEnded, goToProduct, router]);
+
+  useGamepad({ onAction: handleAction });
+
+  const videoSrc = `${product.path}/${product.videos[0]}`;
+  const positions = HOTSPOT_POSITIONS[product.key] ?? [];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="catalog h-[calc(100vh-4rem)] w-full overflow-hidden bg-[#242424] flex flex-col">
+      {/* Video area */}
+      <div className="catalog-video relative flex-1 overflow-hidden">
+        <video
+          key={videoSrc}
+          src={videoSrc}
+          autoPlay
+          muted
+          playsInline
+          className="w-full h-full object-contain"
+          onEnded={() => setVideoEnded(true)}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {/* Hotspots — only after video ends */}
+        {videoEnded && product.hotspots.map((hs, i) => (
+          <Hotspot
+            key={hs.key}
+            label={hs.label}
+            active={activeHotspot === i}
+            onClick={() => goToProduct(hs.productKey)}
+            style={positions[i] ? { top: positions[i].top, left: positions[i].left, transform: "translate(-50%, -50%)" } : undefined}
+          />
+        ))}
+      </div>
+
+      {/* Arrows */}
+      <ProductArrows
+        label={product.label}
+        onPrev={() => {
+          if (currentProduct === "home") return;
+          const idx = HOME_SEQUENCE.indexOf(currentProduct);
+          if (idx <= 0) { goToProduct("home"); return; }
+          const prev = idx - 1;
+          setProductIdx(prev);
+          goToProduct(HOME_SEQUENCE[prev]);
+        }}
+        onNext={() => {
+          if (currentProduct === "home") {
+            setProductIdx(0);
+            goToProduct(HOME_SEQUENCE[0]);
+            return;
+          }
+          const idx = HOME_SEQUENCE.indexOf(currentProduct);
+          if (idx < HOME_SEQUENCE.length - 1) {
+            const next = idx + 1;
+            setProductIdx(next);
+            goToProduct(HOME_SEQUENCE[next]);
+          }
+        }}
+        hasPrev={currentProduct !== "home"}
+        hasNext={currentProduct === "home" || HOME_SEQUENCE.indexOf(currentProduct) < HOME_SEQUENCE.length - 1}
+      />
+    </main>
   );
 }
