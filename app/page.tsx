@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import PRODUCTS, { HOME_SEQUENCE } from "@/data/product-map";
 import { useGamepad } from "@/hooks/useGamepad";
@@ -37,17 +37,56 @@ export default function CatalogPage() {
   const [activeHotspot, setActiveHotspot] = useState(0);
   const [currentProduct, setCurrentProduct] = useState("home");
   const [videoEnded, setVideoEnded] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const pendingProductRef = useRef<string | null>(null);
 
   const product = PRODUCTS[currentProduct];
   const hotspots = product.hotspots;
 
-  const goToProduct = useCallback((key: string) => {
+  const commitSwap = useCallback((key: string) => {
     setCurrentProduct(key);
     setActiveHotspot(0);
     setVideoEnded(false);
+    setIsExiting(false);
+    pendingProductRef.current = null;
   }, []);
 
+  const goToProduct = useCallback((key: string) => {
+    if (isExiting) return; // already playing an exit fade
+
+    const cur = PRODUCTS[currentProduct];
+
+    // If current product has an exit video, play it first
+    if (cur.exitVideo && videoRef.current) {
+      pendingProductRef.current = key;
+      setIsExiting(true);
+      setVideoEnded(false);
+      const vid = videoRef.current;
+      vid.src = `${cur.path}/${cur.exitVideo}`;
+      vid.load();
+      vid.play();
+      return;
+    }
+
+    // No exit video — swap immediately
+    commitSwap(key);
+  }, [currentProduct, isExiting, commitSwap]);
+
+  const handleVideoEnded = useCallback(() => {
+    // If we just finished an exit fade, commit the pending swap
+    if (isExiting && pendingProductRef.current) {
+      commitSwap(pendingProductRef.current);
+      return;
+    }
+    // Normal video ended — show hotspots
+    setVideoEnded(true);
+  }, [isExiting, commitSwap]);
+
   const handleAction = useCallback((action: string) => {
+    if (isExiting) return; // ignore input during exit fade
+
     switch (action) {
       case "dpad-left": {
         if (currentProduct === "home") break;
@@ -102,29 +141,29 @@ export default function CatalogPage() {
         break;
       }
     }
-  }, [currentProduct, hotspots, activeHotspot, activeTab, videoEnded, goToProduct, router]);
+  }, [currentProduct, hotspots, activeHotspot, activeTab, videoEnded, isExiting, goToProduct, router]);
 
   useGamepad({ onAction: handleAction });
 
+  // During exit fade, videoRef.src is set imperatively — don't use key-swap
   const videoSrc = `${product.path}/${product.videos[0]}`;
   const positions = HOTSPOT_POSITIONS[product.key] ?? [];
 
   return (
     <main className="catalog h-[calc(100vh-4rem)] w-full overflow-hidden bg-[#242424] flex flex-col">
-      {/* Video area */}
       <div className="catalog-video relative flex-1 overflow-hidden">
         <video
-          key={videoSrc}
-          src={videoSrc}
+          ref={videoRef}
+          key={isExiting ? undefined : videoSrc}
+          src={isExiting ? undefined : videoSrc}
           autoPlay
           muted
           playsInline
           className="w-full h-full object-contain"
-          onEnded={() => setVideoEnded(true)}
+          onEnded={handleVideoEnded}
         />
 
-        {/* Hotspots — only after video ends */}
-        {videoEnded && product.hotspots.map((hs, i) => (
+        {videoEnded && !isExiting && product.hotspots.map((hs, i) => (
           <Hotspot
             key={hs.key}
             label={hs.label}
@@ -135,7 +174,6 @@ export default function CatalogPage() {
         ))}
       </div>
 
-      {/* Arrows */}
       <ProductArrows
         label={product.label}
         onPrev={() => {

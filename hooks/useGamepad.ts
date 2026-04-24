@@ -14,10 +14,10 @@ export type GamepadAction =
 
 // Standard Xbox button indices (Gamepad API)
 const BUTTON_MAP: Record<number, GamepadAction> = {
-  0:  "a",
-  1:  "b",
-  2:  "x",
-  3:  "y",
+  0: "a",
+  1: "b",
+  2: "x",
+  3: "y",
   12: "dpad-up",
   13: "dpad-down",
   14: "dpad-left",
@@ -37,8 +37,8 @@ export function useGamepad({ onAction, repeatDelay = 200 }: Options) {
     let raf: number;
 
     function poll() {
-      const gp = navigator.getGamepads?.()[0];
-      if (gp) {
+      const gamepads = navigator.getGamepads?.();
+      const gp = gamepads ? Array.from(gamepads).find((g) => g !== null) : null; if (gp) {
         const now = Date.now();
         gp.buttons.forEach((btn, idx) => {
           const action = BUTTON_MAP[idx];
