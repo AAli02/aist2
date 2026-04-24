@@ -45,47 +45,50 @@ export default function CatalogPage() {
   const product = PRODUCTS[currentProduct];
   const hotspots = product.hotspots;
 
+  const playVideo = useCallback((src: string) => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    vid.src = src;
+    vid.load();
+    vid.play().catch(() => { });
+  }, []);
+
   const commitSwap = useCallback((key: string) => {
+    const next = PRODUCTS[key];
     setCurrentProduct(key);
     setActiveHotspot(0);
     setVideoEnded(false);
     setIsExiting(false);
     pendingProductRef.current = null;
-  }, []);
+    playVideo(`${next.path}/${next.videos[0]}`);
+  }, [playVideo]);
 
   const goToProduct = useCallback((key: string) => {
-    if (isExiting) return; // already playing an exit fade
+    if (isExiting) return;
 
     const cur = PRODUCTS[currentProduct];
 
-    // If current product has an exit video, play it first
-    if (cur.exitVideo && videoRef.current) {
+    if (cur.exitVideo) {
       pendingProductRef.current = key;
       setIsExiting(true);
       setVideoEnded(false);
-      const vid = videoRef.current;
-      vid.src = `${cur.path}/${cur.exitVideo}`;
-      vid.load();
-      vid.play();
+      playVideo(`${cur.path}/${cur.exitVideo}`);
       return;
     }
 
-    // No exit video — swap immediately
     commitSwap(key);
-  }, [currentProduct, isExiting, commitSwap]);
+  }, [currentProduct, isExiting, commitSwap, playVideo]);
 
   const handleVideoEnded = useCallback(() => {
-    // If we just finished an exit fade, commit the pending swap
     if (isExiting && pendingProductRef.current) {
       commitSwap(pendingProductRef.current);
       return;
     }
-    // Normal video ended — show hotspots
     setVideoEnded(true);
   }, [isExiting, commitSwap]);
 
   const handleAction = useCallback((action: string) => {
-    if (isExiting) return; // ignore input during exit fade
+    if (isExiting) return;
 
     switch (action) {
       case "dpad-left": {
@@ -145,8 +148,6 @@ export default function CatalogPage() {
 
   useGamepad({ onAction: handleAction });
 
-  // During exit fade, videoRef.src is set imperatively — don't use key-swap
-  const videoSrc = `${product.path}/${product.videos[0]}`;
   const positions = HOTSPOT_POSITIONS[product.key] ?? [];
 
   return (
@@ -154,8 +155,7 @@ export default function CatalogPage() {
       <div className="catalog-video relative flex-1 overflow-hidden">
         <video
           ref={videoRef}
-          key={isExiting ? undefined : videoSrc}
-          src={isExiting ? undefined : videoSrc}
+          src={`${product.path}/${product.videos[0]}`}
           autoPlay
           muted
           playsInline
