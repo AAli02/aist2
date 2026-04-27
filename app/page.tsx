@@ -6,6 +6,7 @@ import PRODUCTS, { TRAVERSAL } from "@/data/product-map";
 import { useGamepad } from "@/hooks/useGamepad";
 import ProductArrows from "@/components/ProductArrows";
 import Hotspot from "@/components/Hotspot";
+import ControllerHUD from "@/components/ControllerHUD";
 
 const TABS = [
   { route: "/" },
@@ -160,6 +161,14 @@ export default function CatalogPage() {
             style={positions[i] ? { top: positions[i].top, left: positions[i].left, transform: "translate(-50%, -50%)" } : undefined}
           />
         ))}
+
+        <ControllerHUD
+          videoEnded={videoEnded}
+          isExiting={isExiting}
+          hasHotspots={hotspots.length > 0}
+          hasPrev={TRAVERSAL.indexOf(currentProduct) > 0}
+          hasNext={TRAVERSAL.indexOf(currentProduct) < TRAVERSAL.length - 1}
+        />
       </div>
 
       <ProductArrows
