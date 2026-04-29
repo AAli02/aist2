@@ -10,23 +10,26 @@ export type GamepadAction =
   | "a"
   | "b"
   | "x"
-  | "y";
+  | "y"
+  | "l3";
 
-// Standard Xbox button indices (Gamepad API)
 const BUTTON_MAP: Record<number, GamepadAction> = {
   0: "a",
   1: "b",
   2: "x",
   3: "y",
+  10: "l3",
   12: "dpad-up",
   13: "dpad-down",
   14: "dpad-left",
   15: "dpad-right",
 };
 
+const NO_REPEAT: Set<GamepadAction> = new Set(["l3"]);
+
 type Options = {
   onAction: (action: GamepadAction) => void;
-  repeatDelay?: number; // ms between repeats while held
+  repeatDelay?: number;
 };
 
 export function useGamepad({ onAction, repeatDelay = 200 }: Options) {
@@ -38,18 +41,27 @@ export function useGamepad({ onAction, repeatDelay = 200 }: Options) {
 
     function poll() {
       const gamepads = navigator.getGamepads?.();
-      const gp = gamepads ? Array.from(gamepads).find((g) => g !== null) : null; if (gp) {
+      const gp = gamepads
+        ? Array.from(gamepads).find((g) => g !== null)
+        : null;
+
+      if (gp) {
         const now = Date.now();
         gp.buttons.forEach((btn, idx) => {
           const action = BUTTON_MAP[idx];
           if (!action) return;
 
           if (btn.pressed) {
-            const last = lastFire.current.get(idx) ?? 0;
-            if (!pressed.current.has(idx) || now - last >= repeatDelay) {
+            if (!pressed.current.has(idx)) {
               onAction(action);
               pressed.current.add(idx);
-              lastFire.current.set(idx, now);
+              if (!NO_REPEAT.has(action)) lastFire.current.set(idx, now);
+            } else if (!NO_REPEAT.has(action)) {
+              const last = lastFire.current.get(idx) ?? 0;
+              if (now - last >= repeatDelay) {
+                onAction(action);
+                lastFire.current.set(idx, now);
+              }
             }
           } else {
             pressed.current.delete(idx);
@@ -57,6 +69,7 @@ export function useGamepad({ onAction, repeatDelay = 200 }: Options) {
           }
         });
       }
+
       raf = requestAnimationFrame(poll);
     }
 

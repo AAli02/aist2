@@ -29,10 +29,17 @@ const CFG = {
   flame: { emitPerSecond: 70, sizeMin: 6, sizeMax: 14, lifeMin: 0.25, lifeMax: 0.55, spreadX: 18, spreadY: 26, speedMin: 2.4, speedMax: 6.6, drag: 0.92, lift: -0.08, alpha: 0.85 },
 };
 
+// per-character size overrides [w, h] — indices match ASSETS.chars
+const CHAR_SIZES: Record<number, [number, number]> = {
+  0: [72, 84],   // male engineer — narrower
+  1: [72, 84],   // female engineer — narrower
+  4: [94, 94],   // forklift — slightly bigger
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Screen = "home" | "playing" | "over";
-type HomeFocus = "char" | "name" | "emailLocal" | "emailDomain" | "emailTld";
+type HomeFocus = "char" | "name" | "emailLocal" | "emailDomain" | "emailTld" | "play";
 type OverFocus = "list" | "play" | "menu";
 type ScoreEntry = { username: string; email: string; score: number; character: number; timestamp: number };
 type Pipe = { x: number; topH: number; w: number; gap: number; scored: boolean };
@@ -53,6 +60,11 @@ const rectHit = (ax: number, ay: number, aw: number, ah: number, bx: number, by:
   ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
 
 const EMAIL_PART_RE = /^[^\s@.]+$/;
+const EMAIL_LOCAL_RE = /^[^\s@]+$/;
+
+function charSize(idx: number): [number, number] {
+  return CHAR_SIZES[idx] ?? [CFG.bird.w, CFG.bird.h];
+}
 
 function loadScores(): ScoreEntry[] {
   try {
@@ -74,10 +86,11 @@ function saveScores(scores: ScoreEntry[]) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(scores)); } catch { /* ignore */ }
 }
 
-function initGS(): GS {
+function initGS(charIdx: number): GS {
+  const [w, h] = charSize(charIdx);
   return {
     score: 0, hatScore: 0, lastHudScore: -1, lastHudHatScore: -1,
-    bird: { x: CFG.bird.x, y: H * 0.5, w: CFG.bird.w, h: CFG.bird.h, vy: 0 },
+    bird: { x: CFG.bird.x, y: H * 0.5, w, h, vy: 0 },
     pipes: [], hats: [], flames: [], flameCarry: 0,
     lastTopH: Math.floor((CFG.pipeMinTop + CFG.pipeMaxTop) / 2), gameStarted: false,
   };
@@ -92,7 +105,7 @@ export default function GamePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
   const imgsRef = useRef<Imgs | null>(null);
-  const gameRef = useRef<GS>(initGS());
+  const gameRef = useRef<GS>(initGS(0));
   const guardRef = useRef(false);
 
   // timing refs
@@ -117,10 +130,10 @@ export default function GamePage() {
   const [homeFocus, setHomeFocus] = useState<HomeFocus>("char");
   const [overFocus, setOverFocus] = useState<OverFocus>("play");
   const scoreListRef = useRef<HTMLDivElement>(null);
-  const [nameInput, setNameInput] = useState("test");
-  const [emailLocal, setEmailLocal] = useState("test");
-  const [emailDomain, setEmailDomain] = useState("test");
-  const [emailTld, setEmailTld] = useState("test");
+  const [nameInput, setNameInput] = useState("");
+  const [emailLocal, setEmailLocal] = useState("");
+  const [emailDomain, setEmailDomain] = useState("");
+  const [emailTld, setEmailTld] = useState("");
   const [assetsReady, setAssetsReady] = useState(false);
   const [logoOk, setLogoOk] = useState(true);
   const [tapVisible, setTapVisible] = useState(false);
@@ -135,7 +148,7 @@ export default function GamePage() {
   const username = nameInput.trim().replace(/[^\w ]+/g, "").trim().slice(0, 12) || "PLAYER";
   const pipeScore = Math.max(0, hudScore - hudHat);
   const nameValid = nameInput.trim().length > 0;
-  const localValid = EMAIL_PART_RE.test(emailLocal.trim());
+  const localValid = EMAIL_LOCAL_RE.test(emailLocal.trim());
   const domainValid = EMAIL_PART_RE.test(emailDomain.trim());
   const tldValid = EMAIL_PART_RE.test(emailTld.trim()) && emailTld.trim().length >= 2;
   const emailValid = localValid && domainValid && tldValid;
@@ -196,7 +209,7 @@ export default function GamePage() {
     if (!domainValid) { setValidationMsg("Enter email domain"); setHomeFocus("emailDomain"); return; }
     if (!tldValid) { setValidationMsg("Enter valid tld"); setHomeFocus("emailTld"); return; }
     setValidationMsg("");
-    gameRef.current = initGS();
+    gameRef.current = initGS(charRef.current);
     setHudScore(0); setHudHat(0); setFinalScore(0); setFinalHat(0);
     lastTsRef.current = 0; accRef.current = 0; lastHudRef.current = 0;
     guardRef.current = false;
@@ -216,11 +229,24 @@ export default function GamePage() {
 
   const endGame = useCallback(() => {
     const G = gameRef.current;
-    const entry: ScoreEntry = { username, email: fullEmail, score: G.score, character: charRef.current, timestamp: Date.now() };
-    const scores = [...loadScores(), entry].sort((a, b) => b.score - a.score || b.timestamp - a.timestamp).slice(0, 2000);
+    const emailKey = fullEmail.toLowerCase();
+    const entry: ScoreEntry = { username, email: emailKey, score: G.score, character: charRef.current, timestamp: Date.now() };
+    const existing = loadScores();
+    // one entry per email — keep higher score
+    const idx = existing.findIndex(s => s.email.toLowerCase() === emailKey);
+    let updated: ScoreEntry[];
+    if (idx !== -1) {
+      if (G.score > existing[idx].score) {
+        existing[idx] = entry;
+      }
+      updated = existing;
+    } else {
+      updated = [...existing, entry];
+    }
+    const scores = updated.sort((a, b) => b.score - a.score || b.timestamp - a.timestamp).slice(0, 2000);
     saveScores(scores);
     setFinalScore(G.score); setFinalHat(G.hatScore);
-    setBest(scores.filter(s => s.username === username).reduce((m, s) => Math.max(m, s.score), 0));
+    setBest(scores.filter(s => s.email.toLowerCase() === emailKey).reduce((m, s) => Math.max(m, s.score), 0));
     setTopScores(scores.slice(0, 10));
     setScreen("over"); setTapVisible(false);
   }, [username, fullEmail]);
@@ -233,7 +259,7 @@ export default function GamePage() {
   const handleGamepad = useCallback((action: string) => {
     if (action === "a") {
       if (screenRef.current === "playing") { jumpOrStart(); return; }
-      if (screenRef.current === "home" && imgsRef.current) { startGame(); return; }
+      if (screenRef.current === "home" && homeFocus === "play") { startGame(); return; }
       if (screenRef.current === "over") {
         if (overFocus === "menu") backToMenu(); else startGame();
         return;
@@ -252,6 +278,7 @@ export default function GamePage() {
       }
       if (action === "dpad-up") {
         setHomeFocus((f) => {
+          if (f === "play") return "emailLocal";
           if (f === "emailLocal" || f === "emailDomain" || f === "emailTld") return "name";
           if (f === "name") return "char";
           return "char";
@@ -261,6 +288,7 @@ export default function GamePage() {
         setHomeFocus((f) => {
           if (f === "char") return "name";
           if (f === "name") return "emailLocal";
+          if (f === "emailLocal" || f === "emailDomain" || f === "emailTld") return "play";
           return f;
         });
       }
@@ -415,10 +443,14 @@ export default function GamePage() {
       }) : [];
       const flames = [...G.flames, ...newF].map(p => ({ ...p, x: p.x + p.vx, y: p.y + p.vy, vx: p.vx * CFG.flame.drag, vy: p.vy * CFG.flame.drag + CFG.flame.lift, life: p.life - dt })).filter(p => p.life > 0);
 
-      // world
-      const pw = pipeWidth(imgsRef.current);
-      const pipes = G.pipes.map(p => ({ ...p, x: p.x - CFG.pipeSpeed })).filter(p => p.x > -pw - 120);
-      const hats = G.hats.map(h => ({ ...h, x: h.x - CFG.pipeSpeed })).filter(h => h.x > -120);
+      // world — only move pipes/hats when gameStarted
+      let pipes = G.pipes;
+      let hats = G.hats;
+      if (G.gameStarted) {
+        const pw = pipeWidth(imgsRef.current);
+        pipes = G.pipes.map(p => ({ ...p, x: p.x - CFG.pipeSpeed })).filter(p => p.x > -pw - 120);
+        hats = G.hats.map(h => ({ ...h, x: h.x - CFG.pipeSpeed })).filter(h => h.x > -120);
+      }
 
       // bird
       const vy = G.gameStarted ? Math.min(G.bird.vy + CFG.gravity, CFG.maxFallSpeed) : 0;
@@ -455,7 +487,9 @@ export default function GamePage() {
       accRef.current += frameMs;
 
       if (screenRef.current === "playing") {
-        let G = ensurePipes(gameRef.current);
+        let G = gameRef.current;
+        // only spawn new pipes once game started
+        if (G.gameStarted) G = ensurePipes(G);
         let steps = 0;
         while (accRef.current >= STEP && steps < MAX_STEPS) {
           accRef.current -= STEP; steps++;
@@ -488,7 +522,7 @@ export default function GamePage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const emailBoxClass = (active: boolean, valid: boolean) => [
-    "rounded-lg border-2 bg-black/55 backdrop-blur-sm px-2 py-2 text-center text-white text-sm font-bold tracking-wider outline-none placeholder:text-white/45 transition-all",
+    "rounded-full border-2 bg-black/55 backdrop-blur-sm px-2 py-2 text-center text-white text-sm font-bold tracking-wider outline-none placeholder:text-white/45 transition-all",
     active ? "border-[#ffd246] shadow-[0_0_0_2px_rgba(255,210,70,0.25)]" : valid ? "border-white/25" : "border-red-400/40"
   ].join(" ");
 
@@ -551,11 +585,11 @@ export default function GamePage() {
                 homeFocus === "name" ? "border-[#ffd246] shadow-[0_0_0_2px_rgba(255,210,70,0.25)]" : nameValid ? "border-white/25" : "border-red-400/40"].join(" ")} />
 
             {/* Split email input: local @ domain . tld */}
-            <div className="flex items-center gap-1 w-[min(340px,94%)]">
+            <div className="flex items-center gap-1 w-[min(500px,100%)]">
               <input
                 ref={emailLocalRef}
                 value={emailLocal}
-                onChange={e => setEmailLocal(e.target.value.replace(/[\s@.]/g, ""))}
+                onChange={e => setEmailLocal(e.target.value.replace(/[\s@]/g, ""))}
                 onFocus={() => setHomeFocus("emailLocal")}
                 maxLength={20}
                 placeholder="name"
@@ -566,12 +600,12 @@ export default function GamePage() {
               <input
                 ref={emailDomainRef}
                 value={emailDomain}
-                onChange={e => setEmailDomain(e.target.value.replace(/[\s@.]/g, ""))}
+                onChange={e => setEmailDomain(e.target.value.replace(/[\s@]/g, ""))}
                 onFocus={() => setHomeFocus("emailDomain")}
                 maxLength={20}
                 placeholder="domain"
                 autoComplete="off"
-                className={`flex-1 min-w-0 ${emailBoxClass(homeFocus === "emailDomain", domainValid)}`}
+                className={`flex-1 basis-0 min-w-0 ${emailBoxClass(homeFocus === "emailDomain", domainValid)}`}
               />
               <span className="text-white font-black text-lg select-none">.</span>
               <input
@@ -582,7 +616,7 @@ export default function GamePage() {
                 maxLength={6}
                 placeholder="com"
                 autoComplete="off"
-                className={`w-14 shrink-0 ${emailBoxClass(homeFocus === "emailTld", tldValid)}`}
+                className={`w-16 shrink-0 ${emailBoxClass(homeFocus === "emailTld", tldValid)}`}
               />
             </div>
 
@@ -592,7 +626,7 @@ export default function GamePage() {
 
             <button type="button" onClick={startGame} disabled={!canStart}
               className={["min-w-47.5 rounded-full px-6 py-2.5 font-black text-lg tracking-wider text-white transition-all",
-                canStart ? "bg-linear-to-b from-[#ffd246] to-[#ffb700] shadow-[0_6px_0_rgba(0,0,0,0.3)] hover:translate-y-0.5" : "bg-white/10 border-2 border-white/20 opacity-60 cursor-not-allowed"].join(" ")}>
+                canStart ? `bg-linear-to-b from-[#ffd246] to-[#ffb700] shadow-[0_6px_0_rgba(0,0,0,0.3)] hover:translate-y-0.5${homeFocus === "play" ? " ring-2 ring-white scale-105" : ""}` : "bg-white/10 border-2 border-white/20 opacity-60 cursor-not-allowed"].join(" ")}>
               {!assetsReady ? "LOADING..." : "PLAY"}
             </button>
           </div>
@@ -600,7 +634,7 @@ export default function GamePage() {
 
         {/* GAME OVER */}
         {screen === "over" && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center gap-3 px-4 pt-6 pb-5 bg-black/35 backdrop-blur-sm overflow-hidden">
+          <div className="absolute inset-0 z-10 flex flex-col justify-center items-center gap-3 px-4 pt-6 pb-5 bg-black/35 backdrop-blur-sm overflow-hidden">
             <div className="text-white font-black text-[44px] leading-none tracking-wider drop-shadow-[0_6px_3px_rgba(0,0,0,0.5)]">GAME OVER</div>
 
             <div className="w-full max-w-90 flex gap-3">
@@ -627,7 +661,10 @@ export default function GamePage() {
                   : topScores.slice(0, 8).map((s, i) => (
                     <div key={`${s.timestamp}-${i}`} className="grid grid-cols-[40px_1fr_64px] items-center gap-3 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white">
                       <div className="font-black text-sm">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</div>
-                      <div className="truncate text-sm font-semibold">{s.username || "PLAYER"}</div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold">{s.username || "PLAYER"}</div>
+                        <div className="truncate text-[10px] text-white/50">{s.email}</div>
+                      </div>
                       <div className="text-right font-black text-sm text-[#ffd246]">{s.score}</div>
                     </div>
                   ))
@@ -643,6 +680,15 @@ export default function GamePage() {
                 className={["min-w-42.5 rounded-full bg-white/10 px-6 py-2.5 font-black text-base tracking-wider text-white border-2 border-white/30 hover:bg-white/15 transition-all",
                   overFocus === "menu" ? "ring-2 ring-[#ffd246] scale-105" : ""].join(" ")}>MENU</button>
             </div>
+            <button type="button" onClick={() => {
+              const data = JSON.stringify(loadScores(), null, 2);
+              const blob = new Blob([data], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a"); a.href = url; a.download = "leaderboard.json"; a.click();
+              URL.revokeObjectURL(url);
+            }} className="text-[10px] font-bold tracking-wider text-white/40 hover:text-white/70 transition-colors">
+              EXPORT JSON
+            </button>
           </div>
         )}
       </div>

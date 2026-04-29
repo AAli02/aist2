@@ -7,8 +7,8 @@ import { useCallback } from "react";
 const TABS = [
   { label: "Product Catalog", route: "/" },
   { label: "Electrode Game", route: "/electrode-game" },
-  // { label: "Video Gallery",   route: "/video-gallery"  },
   { label: "Contact", route: "/contact" },
+  { label: "Wheel",   route: "/wheel"  },
 ];
 
 export default function NavBar() {

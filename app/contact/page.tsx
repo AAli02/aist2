@@ -53,7 +53,7 @@ export default function ContactsPage() {
     if (!qrByKey[key]) {
       try {
         const dataUrl = await QRCode.toDataURL(qrValue, {
-          margin: 2,
+          margin: 4,
           width: 360,
           color: { dark: "#111111", light: "#ffffff" },
         });
@@ -93,20 +93,13 @@ export default function ContactsPage() {
               key={t.key}
               ref={(el) => { cardRefs.current[i] = el; }}
               className={[
-                "contact-card aspect-3/4 cursor-pointer rounded-xl overflow-hidden transition-all duration-150",
+                "contact-card aspect-3/4 cursor-pointer rounded-xl overflow-hidden transition-all duration-150 scroll-mt-24 scroll-mb-24",
                 selected ? "ring-2 ring-[#ffaa00] ring-offset-2 ring-offset-[#242424]" : "",
               ].join(" ")}
               style={{ perspective: "1200px" }}
               onClick={() => { setSelectedIdx(i); toggle(t.key, t.qrValue); }}
             >
-              <div
-                className="relative w-full h-full"
-                style={{
-                  transformStyle: "preserve-3d",
-                  transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-                  transition: "transform 0.5s ease-out",
-                }}
-              >
+              <div className="relative w-full h-full" style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", transition: "transform 0.5s ease-out"}}>
                 {/* FRONT */}
                 <div className="absolute inset-0 flex flex-col" style={{ backfaceVisibility: "hidden" }}>
                   <div className="relative w-full h-full">

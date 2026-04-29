@@ -7,6 +7,8 @@ import { useGamepad } from "@/hooks/useGamepad";
 import ProductArrows from "@/components/ProductArrows";
 import Hotspot from "@/components/Hotspot";
 import ControllerHUD from "@/components/ControllerHUD";
+import MiniMap from "@/components/Minimap";
+
 
 const TABS = [
   { route: "/" },
@@ -23,7 +25,7 @@ const HOTSPOT_POSITIONS: Record<string, { top: string; left: string }[]> = {
     { top: "76%", left: "50%" },
   ],
   roof: [
-    { top: "34%", left: "58%" },
+    { top: "34%", left: "66%" },
     { top: "70%", left: "50%" },
   ],
   "upper-shell": [
@@ -38,46 +40,44 @@ export default function CatalogPage() {
   const [currentProduct, setCurrentProduct] = useState("home");
   const [videoEnded, setVideoEnded] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [fadeOut, setFadeOut] = useState(false);
+  const [showHUD, setShowHUD] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const bgVideoRef = useRef<HTMLVideoElement>(null);
   const pendingProductRef = useRef<string | null>(null);
 
   const product = PRODUCTS[currentProduct];
   const hotspots = product.hotspots;
 
-  const playVideo = useCallback((src: string) => {
-    const vid = videoRef.current;
-    if (!vid) return;
-    vid.src = src;
-    vid.load();
-    vid.play().catch(() => { });
-  }, []);
-
   const commitSwap = useCallback((key: string) => {
     const next = PRODUCTS[key];
-    setCurrentProduct(key);
-    setActiveHotspot(0);
-    setVideoEnded(false);
-    setIsExiting(false);
-    pendingProductRef.current = null;
-    playVideo(`${next.path}/${next.videos[0]}`);
-  }, [playVideo]);
+    const bg = bgVideoRef.current;
+    const fg = videoRef.current;
+    if (!bg || !fg) return;
+
+    bg.src = `${next.path}/${next.videos[0]}`;
+    bg.load();
+
+    setFadeOut(true);
+
+    setTimeout(() => {
+      fg.src = bg.src;
+      fg.load();
+      fg.play().catch(() => { });
+      setCurrentProduct(key);
+      setActiveHotspot(0);
+      setVideoEnded(false);
+      setIsExiting(false);
+      pendingProductRef.current = null;
+      setFadeOut(false);
+    }, 400);
+  }, []);
 
   const goToProduct = useCallback((key: string) => {
     if (isExiting) return;
-
-    const cur = PRODUCTS[currentProduct];
-
-    if (cur.exitVideo) {
-      pendingProductRef.current = key;
-      setIsExiting(true);
-      setVideoEnded(false);
-      playVideo(`${cur.path}/${cur.exitVideo}`);
-      return;
-    }
-
     commitSwap(key);
-  }, [currentProduct, isExiting, commitSwap, playVideo]);
+  }, [isExiting, commitSwap]);
 
   const handleVideoEnded = useCallback(() => {
     if (isExiting && pendingProductRef.current) {
@@ -132,6 +132,10 @@ export default function CatalogPage() {
         goToProduct("home");
         break;
       }
+      case "l3": {
+        setShowHUD((p) => !p);
+        break;
+      }
     }
   }, [currentProduct, hotspots, activeHotspot, activeTab, videoEnded, isExiting, goToProduct, router]);
 
@@ -140,16 +144,27 @@ export default function CatalogPage() {
   const positions = HOTSPOT_POSITIONS[product.key] ?? [];
 
   return (
-    <main className="catalog h-[calc(100vh-4rem)] w-full overflow-hidden bg-[#242424] flex flex-col">
+    <main className="catalog h-[calc(100vh-4rem)] w-full overflow-hidden flex flex-col"
+      style={{ background: "linear-gradient(180deg, #c8c8c8 0%, #8a8a8a 65%, #a0a0a0 100%)" }}>
       <div className="catalog-video relative flex-1 overflow-hidden">
+        <MiniMap currentProduct={currentProduct} onNavigate={goToProduct} />
+
         <video
           ref={videoRef}
           src={`${product.path}/${product.videos[0]}`}
           autoPlay
           muted
           playsInline
-          className="w-full h-full object-contain"
+          className="w-100% h-100% object-contain transition-opacity duration-400 ease-in-out"
+          style={{ opacity: fadeOut ? 0 : 1 }}
           onEnded={handleVideoEnded}
+        />
+        <video
+          ref={bgVideoRef}
+          muted
+          playsInline
+          className="w-100% h-100% object-contain absolute inset-0 pointer-events-none"
+          style={{ opacity: 0 }}
         />
 
         {videoEnded && !isExiting && product.hotspots.map((hs, i) => (
@@ -162,7 +177,33 @@ export default function CatalogPage() {
           />
         ))}
 
+        {product.description && (
+          <div
+            key={currentProduct}
+            className="product-description absolute left-0 right-0 px-6 py-4 text-sm whitespace-pre-line font-[Montserrat] font-medium"
+            style={{
+              bottom: product.descriptionPosition ?? "5%",
+              animation: `descFadeIn 700ms ease-in-out ${product.descriptionDelay ?? 500}ms both`,
+            }}
+            dangerouslySetInnerHTML={{ __html: product.description }}
+          />
+        )}
+
+        {currentProduct !== "home" && (
+          <div
+            key={`title-${currentProduct}`}
+            className="product-title absolute top-[2%] right-6 text-right font-[Montserrat] font-black text-2xl uppercase tracking-wide"
+            style={{
+              color: "#2a2a2a",
+              animation: "descFadeIn 700ms ease-in-out 300ms both",
+            }}
+          >
+            {product.label}
+          </div>
+        )}
+
         <ControllerHUD
+          visible={showHUD}
           videoEnded={videoEnded}
           isExiting={isExiting}
           hasHotspots={hotspots.length > 0}
@@ -184,7 +225,6 @@ export default function CatalogPage() {
         hasPrev={TRAVERSAL.indexOf(currentProduct) > 0}
         hasNext={TRAVERSAL.indexOf(currentProduct) < TRAVERSAL.length - 1}
       />
-
     </main>
   );
 }
