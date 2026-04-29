@@ -116,16 +116,29 @@ export default function CatalogPage() {
           goToProduct(hotspots[activeHotspot].productKey);
         break;
       }
-      case "x": {
+      case "lb": {
         const prev = Math.max(0, activeTab - 1);
         setActiveTab(prev);
         router.push(TABS[prev].route);
         break;
       }
-      case "b": {
+      case "rb": {
         const next = Math.min(TABS.length - 1, activeTab + 1);
         setActiveTab(next);
         router.push(TABS[next].route);
+        break;
+      }
+      case "x": {
+        const v = videoRef.current;
+        if (v) {
+          v.currentTime = 0;
+          v.play().catch(() => { });
+          setVideoEnded(false);
+        }
+        break;
+      }
+      case "b": {
+        if (currentProduct !== "home") goToProduct("home");
         break;
       }
       case "y": {

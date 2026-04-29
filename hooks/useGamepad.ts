@@ -11,6 +11,8 @@ export type GamepadAction =
   | "b"
   | "x"
   | "y"
+  | "lb"
+  | "rb"
   | "l3";
 
 const BUTTON_MAP: Record<number, GamepadAction> = {
@@ -18,6 +20,8 @@ const BUTTON_MAP: Record<number, GamepadAction> = {
   1: "b",
   2: "x",
   3: "y",
+  4: "lb",
+  5: "rb",
   10: "l3",
   12: "dpad-up",
   13: "dpad-down",
@@ -25,7 +29,7 @@ const BUTTON_MAP: Record<number, GamepadAction> = {
   15: "dpad-right",
 };
 
-const NO_REPEAT: Set<GamepadAction> = new Set(["l3"]);
+const NO_REPEAT: Set<GamepadAction> = new Set(["l3", "lb", "rb"]);
 
 type Options = {
   onAction: (action: GamepadAction) => void;

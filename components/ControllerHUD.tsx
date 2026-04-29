@@ -14,19 +14,26 @@ type LegendRow = {
   text: string;
 };
 
+type LegendGrid = {
+  grid: true;
+  cells: { label: string; color: string; text: string }[];
+};
+
+type LegendEntry = LegendRow | LegendGrid;
+
 function buildLegend(
   videoEnded: boolean,
   isExiting: boolean,
   hasHotspots: boolean,
   hasPrev: boolean,
   hasNext: boolean,
-): LegendRow[] {
+): LegendEntry[] {
   if (isExiting) return [];
 
-  const rows: LegendRow[] = [];
+  const entries: LegendEntry[] = [];
 
   if (hasPrev || hasNext) {
-    rows.push({
+    entries.push({
       icons: [
         { label: "◀", color: "#C800FF" },
         { label: "▶", color: "#C800FF" },
@@ -36,7 +43,7 @@ function buildLegend(
   }
 
   if (videoEnded && hasHotspots) {
-    rows.push({
+    entries.push({
       icons: [
         { label: "▼", color: "#FBB100" },
         { label: "▲", color: "#FFA200" },
@@ -45,37 +52,35 @@ function buildLegend(
     });
   }
 
-  rows.push({
+  entries.push({
     icons: [
-      { label: "X", color: "#0095FF" },
-      { label: "B", color: "#FF0000" },
+      { label: "LB", color: "#0095FF" },
+      { label: "RB", color: "#FF0000" },
     ],
     text: "Prev / Next Tab",
   });
 
-  if (videoEnded && hasHotspots) {
-    rows.push({
-      icons: [{ label: "A", color: "#00DD66" }],
-      text: "Confirm",
-    });
-  }
-
-  rows.push({
-    icons: [{ label: "Y", color: "#FFA100" }],
-    text: "Home",
+  entries.push({
+    grid: true,
+    cells: [
+      { label: "A", color: "#00DD66", text: "Confirm" },
+      { label: "B", color: "#FF0000", text: "Back" },
+      { label: "Y", color: "#FFA100", text: "Home" },
+      { label: "X", color: "#0095FF", text: "Replay" },
+    ],
   });
 
-  return rows;
+  return entries;
 }
 
 function IconBadge({ label, color }: { label: string; color: string }) {
   const isArrow = "◀▶▲▼".includes(label);
-  const size = isArrow ? "w-4 h-4" : "w-4 h-4";
   const fontSize = isArrow ? "text-[9px]" : "text-[10px]";
+  const width = label.length > 1 ? "w-auto px-1" : "w-4";
 
   return (
     <span
-      className={`${size} ${fontSize} inline-flex items-center justify-center rounded-sm text-white font-bold shrink-0`}
+      className={`${width} h-4 ${fontSize} inline-flex items-center justify-center rounded-sm text-white font-bold shrink-0`}
       style={{ backgroundColor: color }}
     >
       {label}
@@ -83,6 +88,9 @@ function IconBadge({ label, color }: { label: string; color: string }) {
   );
 }
 
+function isGrid(entry: LegendEntry): entry is LegendGrid {
+  return "grid" in entry && entry.grid === true;
+}
 
 export default function ControllerHUD({
   visible,
@@ -101,7 +109,7 @@ export default function ControllerHUD({
 
         {/* Controller graphic */}
         <svg
-          viewBox="0 0 610 424"
+          viewBox="0 -80 610 504"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="w-32.5 h-auto shrink-0"
@@ -113,7 +121,9 @@ export default function ControllerHUD({
           />
           {/* Bumpers */}
           <path d="M121.517 20.5L104.517 38.5L141.017 26L207.517 13.5L200.017 4H160.517Z" fill="#0095FF" fillOpacity="0.7" />
+          <text x="160" y="-12" fill="#0095FF" fontSize="64" fontWeight="bold" textAnchor="middle">LB</text>
           <path d="M488.517 20.5L505.517 38.5L469.017 26L402.517 13.5L410.017 4H449.517Z" fill="#FF0000" fillOpacity="0.7" />
+          <text x="450" y="-12" fill="#FF0000" fontSize="64" fontWeight="bold" textAnchor="middle">RB</text>
           {/* Y */}
           <circle cx="463.5" cy="78" r="21" fill="#FFA100" fillOpacity="0.85" />
           <path d="M454.969 68.5455H459.682L463.372 75.8494H463.526L467.216 68.5455H471.929L465.546 80.1705V86H461.352V80.1705L454.969 68.5455Z" fill="white" />
@@ -148,18 +158,31 @@ export default function ControllerHUD({
 
         {/* Legend */}
         <div className="legend flex flex-col gap-2">
-          {legend.map((row) => (
-            <div key={row.text} className="legend-row flex items-center gap-2">
-              <div className="legend-icons flex items-center gap-0.5">
-                {row.icons.map((icon, i) => (
-                  <IconBadge key={i} label={icon.label} color={icon.color} />
+          {legend.map((entry, ri) =>
+            isGrid(entry) ? (
+              <div key={ri} className="legend-grid grid grid-cols-2 gap-x-4 gap-y-0.5">
+                {entry.cells.map((cell) => (
+                  <div key={cell.label} className="legend-cell flex items-center gap-1">
+                    <IconBadge label={cell.label} color={cell.color} />
+                    <span className="legend-text text-[10px] font-medium whitespace-nowrap">
+                      {cell.text}
+                    </span>
+                  </div>
                 ))}
               </div>
-              <span className="legend-text text-[10px] font-medium whitespace-nowrap">
-                {row.text}
-              </span>
-            </div>
-          ))}
+            ) : (
+              <div key={entry.text} className="legend-row flex items-center gap-2">
+                <div className="legend-icons flex items-center gap-0.5">
+                  {entry.icons.map((icon, i) => (
+                    <IconBadge key={i} label={icon.label} color={icon.color} />
+                  ))}
+                </div>
+                <span className="legend-text text-[10px] font-medium whitespace-nowrap">
+                  {entry.text}
+                </span>
+              </div>
+            )
+          )}
         </div>
       </div>
     </div>

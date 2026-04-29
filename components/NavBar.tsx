@@ -18,11 +18,11 @@ export default function NavBar() {
   const activeIdx = TABS.findIndex((t) => t.route === pathname);
 
   const handleAction = useCallback((action: string) => {
-    if (action === "x") {
+    if (action === "lb") {
       const prev = Math.max(0, activeIdx - 1);
       router.push(TABS[prev].route);
     }
-    if (action === "b") {
+    if (action === "rb") {
       const next = Math.min(TABS.length - 1, activeIdx + 1);
       router.push(TABS[next].route);
     }
