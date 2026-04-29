@@ -99,7 +99,7 @@ export default function ContactsPage() {
               style={{ perspective: "1200px" }}
               onClick={() => { setSelectedIdx(i); toggle(t.key, t.qrValue); }}
             >
-              <div className="relative w-full h-full" style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", transition: "transform 0.5s ease-out"}}>
+              <div className="relative w-full h-full" style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", transition: "transform 0.5s ease-out" }}>
                 {/* FRONT */}
                 <div className="absolute inset-0 flex flex-col" style={{ backfaceVisibility: "hidden" }}>
                   <div className="relative w-full h-full">

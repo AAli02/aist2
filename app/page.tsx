@@ -138,6 +138,7 @@ export default function CatalogPage() {
         break;
       }
       case "b": {
+        // Back — go to parent (home)
         if (currentProduct !== "home") goToProduct("home");
         break;
       }
