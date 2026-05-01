@@ -17,7 +17,7 @@ const PEOPLE: Person[] = [
   { key: "claudia", name: "Claudia Leal", position: "Chief Executive Officer", img: "/headshots/claudia.jpg", qrValue: "https://dot.cards/claudialeal" },
   { key: "pedro", name: "Pedro Quiroga", position: "VP of Operations", img: "/headshots/pedro.jpeg", qrValue: "https://dot.cards/pedroquiroga" },
   { key: "sharon", name: "Sharon Jonet", position: "Engineering Manager", img: "/headshots/sharon.jpg", qrValue: "https://dot.cards/sharonjonnet" },
-  { key: "bill", name: "Bill Bennet", position: "Sales Manager", img: "/headshots/bill.jpeg", qrValue: "https://dot.cards/billbennett" },
+  { key: "bill", name: "Bill Bennet", position: "Sales Manager", img: "/headshots/bill.png", qrValue: "https://dot.cards/billbennett" },
   { key: "alex", name: "Alex Wittmer", position: "Senior Engineer", img: "/headshots/alex.jpeg", qrValue: "https://dot.cards/alexwittmer" },
   { key: "tony", name: "Tony Ramirez", position: "Inside Sales Manager", img: "/headshots/tony.jpg", qrValue: "https://dot.cards/tony_ramirez" },
   { key: "jesse", name: "Jesse Quiroga", position: "Marketing Specialist", img: "/headshots/jesse.jpg", qrValue: "https://dot.cards/jessequiroga" },
@@ -28,7 +28,7 @@ const QR_TILE = {
   key: "qr-site",
   name: "Website",
   position: "Scan to visit",
-  img: "/steel-soar/logo.png",
+  img: "/headshots/logo.jpg",
   qrValue: "https://eafabcorp.com",
 };
 
@@ -115,7 +115,7 @@ export default function ContactsPage() {
                   className="absolute inset-0 flex flex-col justify-center items-center rounded-xl bg-[#1a1a1a] border border-[#ffaa00]"
                   style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                 >
-                  <div className="bg-white p-2 rounded">
+                  <div className="bg-white p-2 ›">
                     {qrByKey[t.key] ? (
                       <Image src={qrByKey[t.key]} alt={`QR for ${t.name}`} width={160} height={160} />
                     ) : (
